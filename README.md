@@ -83,7 +83,7 @@ The results should look like the
    ├── Train_Labeled
    │   ├── images
    │   └── labels
-   ├── Train_Pre_3class_slide'
+   ├── Train_Pre_3class_slide
    │   ├── images
    │   └── labels
    │   ├── dtrainval.json
