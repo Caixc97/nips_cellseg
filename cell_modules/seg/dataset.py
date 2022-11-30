@@ -154,6 +154,7 @@ class PredBBoxDataset(CustomDataset):
         coco = COCO(ann_file)
         preds = mmcv.load(pred_file)
         img_ids = coco.getImgIds()
+        preds = preds[:200]
         assert len(img_ids) == len(preds)
         box_infos = []
         for img_id, pred in zip(img_ids, preds):
@@ -186,8 +187,10 @@ class PredBBoxDataset(CustomDataset):
         self.score_thr = score_thr
         self.mask_rerank = mask_rerank
         self.pipeline = Compose(pipeline)
-
-        self.helper_dataset = build_dataset(helper_dataset)
+        if helper_dataset is None:
+            self.helper_dataset = None
+        else:
+            self.helper_dataset = build_dataset(helper_dataset)
 
     def __len__(self):
         return len(self.box_infos)

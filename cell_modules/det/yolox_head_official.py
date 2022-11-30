@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
 from inspect import signature
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -222,31 +223,31 @@ class YOLOXHeadOfficial(BaseDenseHead, BBoxTestMixin):
                 )
             )
 
-    def _build_stacked_convs(self):
-        """Initialize conv layers of a single level head."""
-        conv = DepthwiseSeparableConvModule \
-            if self.use_depthwise else ConvModule
-        stacked_convs = []
-        for i in range(self.stacked_convs):
-            chn = self.in_channels if i == 0 else self.feat_channels
-            if self.dcn_on_last_conv and i == self.stacked_convs - 1:
-                conv_cfg = dict(type='DCNv2')
-            else:
-                conv_cfg = self.conv_cfg
-            stacked_convs.append(
-                conv(
-                    chn,
-                    self.feat_channels,
-                    3,
-                    stride=1,
-                    padding=1,
-                    conv_cfg=conv_cfg,
-                    norm_cfg=self.norm_cfg,
-                    act_cfg=self.act_cfg,
-                    bias=self.conv_bias
-                )
-            )
-        return nn.Sequential(*stacked_convs)
+    # def _build_stacked_convs(self):
+    #     """Initialize conv layers of a single level head."""
+    #     conv = DepthwiseSeparableConvModule \
+    #         if self.use_depthwise else ConvModule
+    #     stacked_convs = []
+    #     for i in range(self.stacked_convs):
+    #         chn = self.in_channels if i == 0 else self.feat_channels
+    #         if self.dcn_on_last_conv and i == self.stacked_convs - 1:
+    #             conv_cfg = dict(type='DCNv2')
+    #         else:
+    #             conv_cfg = self.conv_cfg
+    #         stacked_convs.append(
+    #             conv(
+    #                 chn,
+    #                 self.feat_channels,
+    #                 3,
+    #                 stride=1,
+    #                 padding=1,
+    #                 conv_cfg=conv_cfg,
+    #                 norm_cfg=self.norm_cfg,
+    #                 act_cfg=self.act_cfg,
+    #                 bias=self.conv_bias
+    #             )
+    #         )
+    #     return nn.Sequential(*stacked_convs)
 
     def _build_predictor(self):
         """Initialize predictor layers of a single level head."""
@@ -258,7 +259,7 @@ class YOLOXHeadOfficial(BaseDenseHead, BBoxTestMixin):
     def init_weights(self):
         super(YOLOXHeadOfficial, self).init_weights()
         # Use prior in model initialization to improve stability
-        bias_init = bias_init_with_prob(0.01)
+        bias_init = float(-np.log((1 - 0.01) / 0.01))
         for conv_cls, conv_obj in zip(self.cls_preds, self.obj_preds):
             conv_cls.bias.data.fill_(bias_init)
             conv_obj.bias.data.fill_(bias_init)
@@ -366,7 +367,7 @@ class YOLOXHeadOfficial(BaseDenseHead, BBoxTestMixin):
         flatten_bboxes = self._bbox_decode(flatten_priors, flatten_bbox_preds)
 
         if rescale:
-            flatten_bboxes[..., :4] /= flatten_bboxes.new_tensor(scale_factors
+            flatten_bboxes[..., :4] /= flatten_bboxes.new_tensor(np.array(scale_factors)
                                                                 ).unsqueeze(1)
 
         result_list = []

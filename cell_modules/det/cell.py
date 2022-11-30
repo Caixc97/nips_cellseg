@@ -129,7 +129,6 @@ class COCOevalMaxDets(COCOeval_opt):
     def __str__(self):
         self.summarize()
 
-
 @DATASETS.register_module()
 class CellDataset(_CocoDataset):
     def evaluate(

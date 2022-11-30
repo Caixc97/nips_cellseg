@@ -1,7 +1,8 @@
 import torch
-from torchvision.ops import roi_align
+from torchvision.ops import roi_align, roi_pool
+from cv2 import resize, INTER_NEAREST
 
-import mmcv
+from mmcv.image.geometric import imflip, imresize
 import numpy as np
 from mmseg.datasets import PIPELINES
 from mmseg.datasets.pipelines.formatting import to_tensor, DC
@@ -43,6 +44,7 @@ class BoxJitter(object):
             return results
 
 
+
 @PIPELINES.register_module()
 class ROIAlign(object):
     def __init__(
@@ -55,15 +57,10 @@ class ROIAlign(object):
 
     def __call__(self, results):
         x1, y1, x2, y2 = results['bbox']  # xyxy
-        rois = torch.FloatTensor([[0, x1, y1, x2, y2]])
-
         # crop img
         img = results['img']  # hwc
-        input = torch.from_numpy(img.transpose(2, 0, 1)[None, ...]).float()
-        img_crop = roi_align(
-            input, rois, self.output_size, self.spatial_scale,
-            self.sampling_ratio, self.aligned
-        )[0].numpy().transpose(1, 2, 0)
+        img_crop = img[int(y1+0.5):int(y2+0.5), int(x1+0.5):int(x2+0.5), :]
+        img_crop = resize(img_crop, self.output_size, interpolation=INTER_NEAREST)
 
         results['img'] = img_crop
         results['img_shape'] = img_crop.shape
@@ -75,6 +72,7 @@ class ROIAlign(object):
         if 'gt_semantic_seg' in results:
             mask = results['gt_semantic_seg']
             input = torch.from_numpy(mask[None, None, ...]).float()
+            rois = torch.FloatTensor([[0, x1, y1, x2, y2]])
             mask_crop = roi_align(
                 input, rois, self.output_size, self.spatial_scale,
                 self.sampling_ratio, self.aligned
@@ -82,6 +80,7 @@ class ROIAlign(object):
             mask_crop = (mask_crop >= 0.5).astype(int)
             results['gt_semantic_seg'] = mask_crop
         return results
+
 
 
 @PIPELINES.register_module()

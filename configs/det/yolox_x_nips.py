@@ -11,7 +11,7 @@ model = dict(
     neck=None,
     bbox_head=dict(
         type='YOLOXHeadOfficial',
-        num_classes=3,
+        num_classes=1,
         width=1.25,
         in_channels=[256, 512, 1024]
     ),
@@ -20,8 +20,8 @@ model = dict(
 )
 
 dataset_type = 'CellDataset'
-classes = ('shsy5y', 'astro', 'cort')
-data_root = '../data/'
+classes = ('cell',)
+data_root = '../data/nips/Train_Pre_3class_slide/'
 train_pipeline = [
     dict(type='Mosaic', img_scale=img_scale, pad_val=114.0),
     dict(
@@ -60,7 +60,7 @@ train_dataset = dict(
         type=dataset_type,
         classes=classes,
         ann_file=data_root + 'dtrain_g0.json',
-        img_prefix=data_root + 'train',
+        img_prefix=data_root + 'images',
         pipeline=[
             dict(type='LoadImageFromFile', to_float32=True),
             dict(type='LoadAnnotations', with_bbox=True)
@@ -92,27 +92,27 @@ test_pipeline = [
 
 data = dict(
     samples_per_gpu=4,
-    workers_per_gpu=0,
+    workers_per_gpu=4,
     # persistent_workers=True,
     train=train_dataset,
     val=dict(
         type=dataset_type,
         classes=classes,
         ann_file=data_root + 'dval_g0.json',
-        img_prefix=data_root + 'train',
+        img_prefix=data_root + 'images',
         pipeline=test_pipeline,
     ),
     test=dict(
         type=dataset_type,
         classes=classes,
         ann_file=data_root + 'dval_g0.json',
-        img_prefix=data_root + 'train',
+        img_prefix=data_root + 'images',
         pipeline=test_pipeline,
     ),
 )
 optimizer = dict(
     type='SGD',
-    lr=0.005 / 64,
+    lr=0.0001 / 64,
     momentum=0.9,
     weight_decay=0.0005,
     nesterov=True,
@@ -136,17 +136,17 @@ lr_config = dict(
     min_lr_ratio=0.01
 )
 
-runner = dict(type='EpochBasedRunner', max_epochs=30)
+runner = dict(type='EpochBasedRunner', max_epochs=10)
 checkpoint_config = dict(interval=5)
 log_config = dict(interval=10, hooks=[dict(type='TextLoggerHook')])
 custom_hooks = [dict(type='NumClassCheckHook')]
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-load_from = 'work_dirs/yolox_x_livecell/epoch_15.pth'
+load_from = None
 resume_from = None
 workflow = [('train', 1)]
 custom_hooks = [
-    dict(type='YOLOXModeSwitchHook', num_last_epochs=15, priority=48),
+    dict(type='YOLOXModeSwitchHook', num_last_epochs=9, priority=48),
     dict(
         type='ExpMomentumEMAHook',
         resume_from=resume_from,
@@ -155,3 +155,5 @@ custom_hooks = [
         priority=49
     )
 ]
+
+

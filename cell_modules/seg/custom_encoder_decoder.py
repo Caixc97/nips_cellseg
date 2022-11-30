@@ -5,30 +5,48 @@ from mmcv.runner import load_checkpoint
 from mmseg.models.segmentors import EncoderDecoder, BaseSegmentor
 from mmseg.models.builder import build_segmentor, SEGMENTORS
 from mmdet.models.roi_heads.mask_heads.fcn_mask_head import _do_paste_mask
+from mmseg.ops import resize
 
 
 @SEGMENTORS.register_module()
 class CustomEncoderDecoder(EncoderDecoder):
     def simple_test(self, img, img_meta, bbox, rescale=True):
         """Simple test with single image."""
-        assert len(img_meta) == 1 and len(bbox) == 1
+        seg_logits = self.encode_decode(img, img_meta)
+        batch_res = []
+        for i, seg_logit in enumerate(seg_logits):
+            seg_logit = torch.unsqueeze(seg_logit, 0)
+            if rescale:
+                # support dynamic shape for onnx
+                if torch.onnx.is_in_onnx_export():
+                    size = img.shape[2:]
+                else:
+                    # remove padding area
+                    resize_shape = img_meta[0]['img_shape'][:2]
+                    seg_logit = seg_logit[:, :, :resize_shape[0], :resize_shape[1]]
+                    size = img_meta[0]['ori_shape'][:2]
+                seg_logit = resize(
+                    seg_logit,
+                    size=size,
+                    mode='bilinear',
+                    align_corners=self.align_corners,
+                    warning=False)
+                seg_prob = seg_logit[:, 1]
+                seg_prob = torch.sigmoid(seg_prob)
+                # map (prob, box) back to original img
+                masks = seg_prob.unsqueeze(0)
+                img_h, img_w, _ = img_meta[0]['ori_shape']
+                boxes = torch.stack([bbox[0][i]])
+                seg_prob, _ = _do_paste_mask(masks, boxes, img_h, img_w, False)
+                seg_pred = seg_prob >= 0.5
+                confidence = seg_prob[seg_pred].mean()
 
-        seg_logit = self.inference(
-            img, img_meta, rescale
-        )  # softmax in inference
-        seg_prob = seg_logit[:, 1]
+                seg_pred = seg_pred.cpu().numpy()[0]
+                confidence = confidence.item()
+                res = dict(seg_pred=seg_pred, confidence=confidence)
+                batch_res.append(res)
+        return batch_res
 
-        # map (prob, box) back to original img
-        masks = seg_prob.unsqueeze(0)
-        img_h, img_w, _ = img_meta[0]['ori_shape']
-        boxes = torch.stack(bbox[0])
-        seg_prob, _ = _do_paste_mask(masks, boxes, img_h, img_w, False)
-        seg_pred = seg_prob >= 0.5
-        confidence = seg_prob[seg_pred].mean()
-
-        seg_pred = seg_pred.cpu().numpy()[0]
-        confidence = confidence.item()
-        return [dict(seg_pred=seg_pred, confidence=confidence)]
 
     def aug_test(self, imgs, img_metas, bbox, rescale=True):
         """Test with augmentations.
