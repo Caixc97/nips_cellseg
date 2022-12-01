@@ -83,7 +83,7 @@ The results should look like the
    ├── Train_Labeled
    │   ├── images
    │   └── labels
-   ├── Train_Pre_3class_slide'
+   ├── Train_Pre_3class_slide
    │   ├── images
    │   └── labels
    │   ├── dtrainval.json
@@ -139,3 +139,8 @@ python tools/seg/train.py configs/seg/unet_nips.py --load-from work_dirs/unet_ka
 python tools/seg/test.py configs/seg/unet_nips.py work_dirs/unet_nips.py/latest.pth --out work_dirs/uunet_nips.py/val_results.pkl --eval dummy
 ```
 
+## Inference
+```
+# end-to-end automatical inference
+python tools/test_pred.py -i /data/TuningSet -o outputTuning --det_cfg work_dirs/yolox_x_nips/latest.pth --seg_cfg work_dirs/unet_nips.py/latest.pth
+```
