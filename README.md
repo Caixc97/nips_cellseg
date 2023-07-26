@@ -144,3 +144,14 @@ python tools/seg/test.py configs/seg/unet_nips.py work_dirs/unet_nips.py/latest.
 # end-to-end automatical inference
 python tools/test_pred.py -i /data/TuningSet -o outputTuning --det_cfg work_dirs/yolox_x_nips/latest.pth --seg_cfg work_dirs/unet_nips.py/latest.pth
 ```
+
+## Model ckp
+out checkpoint can be downloaded here
+
+Det: https://drive.google.com/file/d/1S-F6E6DoaznugV3rZORISK4bU_pdmE56/view?usp=sharing
+
+Seg: https://drive.google.com/file/d/1MmIOs_M37VK0nTsAGNk6ErmzX9wIgxHV/view?usp=share_link
+
+## Docker
+The inference docker can be download here
+url: https://pan.baidu.com/s/1RmtfImwSE1VZzxvFyAAVXQ?pwd=l0j7 pwd: l0j7 
